@@ -1,0 +1,25 @@
+{
+  "name": "cryptologger",
+  "version": "1.0.0",
+  "description": "Logging cryptos",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kekonen/cryptologger.git"
+  },
+  "keywords": [
+    "crypto"
+  ],
+  "author": "Daniil Naumetc",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kekonen/cryptologger/issues"
+  },
+  "homepage": "https://github.com/kekonen/cryptologger#readme",
+  "dependencies": {
+    "ccxt": "^1.17.394"
+  }
+}
