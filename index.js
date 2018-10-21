@@ -1,4 +1,17 @@
 const ccxt = require('ccxt')
+const sa = require('superagent')
+const storeurl = 'http://localhost:8000'
+
+const kraken    = new ccxt.kraken()
+const bitfinex  = new ccxt.bitfinex() //{ verbose: true }
+const poloniex  = new ccxt.poloniex()
+const binance   = new ccxt.binance()
+const bittrex   = new ccxt.bittrex()
+
+
+const exchangeId2exchange = Object.assign({}, ...[kraken, bitfinex, poloniex, binance, bittrex].map(exchange => ({[exchange.id]: exchange})))
+
+
 
 class TradesContainer{
     constructor(exchange, ticker){
@@ -9,12 +22,30 @@ class TradesContainer{
     }
 
     async fetch() {
+        console.log()
         const since = this.exchange.milliseconds() - 86400000
-        const trades = await exchange.fetchTrades(this.ticker, since, 100)
+        var trades = await this.exchange.fetchTrades(this.ticker, since, 100)
 
-        trades.forEach(trage => {
+        // trades = trades.map(trade => ({
+        //     side: trade.side == 'sell'?true:false,
+        //     price: trade.price,
+        //     amount: trade.amount,
+        //     ts: trade.timestamp,
+        //     id: trade.id?parseInt(trade.id):0
+        // }))
 
-        })
+        // trades.forEach(trade => {
+        //     console.log('trade', trade)
+        // })
+
+        // console.log(this.exchange.id, this.ticker.replace(/\//, ''), trades)
+        await sa.post(`${storeurl}/trades/${this.exchange.id}/${this.ticker.replace(/\//, '')}`).send({trades: trades.map(trade => ({
+            side: trade.side == 'sell'?true:false,
+            price: trade.price,
+            amount: trade.amount,
+            ts: trade.timestamp,
+            id: trade.id?parseInt(trade.id):0
+        }))})
 
     }
 }
@@ -22,26 +53,83 @@ class TradesContainer{
 class TradesStore{
     constructor(exchangeCurrencies){
         this.store = {}
+        this.exchangeCurrencies = exchangeCurrencies
         // exchangeCurrencies = {'poloniex': ['BTC/USDT', 'ETH/USDT'] }
 
         Object.keys(exchangeCurrencies).forEach(exchange => {
-            this.store[exchange] = Object.assign({}, ...exchangeCurrencies[exchange].map(currency => ({[currency]: []})))
+            this.store[exchange] = Object.assign({}, ...exchangeCurrencies[exchange].map(currency => ({[currency]: new TradesContainer(exchangeId2exchange[exchange], currency)})))
         })
     }
 
-
+    async fetch() {
+        Object.keys(this.store).forEach( async (exchange) => {
+            // console.log('exchange:', this.store[exchange])
+            Object.keys(this.store[exchange]).forEach(async (ticker) => {
+                await this.store[exchange][ticker].fetch()
+            })
+        })
+    }
 }
 
 
+class OrdersContainer{
+    constructor(exchange, ticker){
+        this.exchange = exchange
+        this.ticker = ticker
+
+        this.container = []
+    }
+
+    async fetch() {
+        console.log()
+        const since = this.exchange.milliseconds() - 86400000
+        var orders = await this.exchange.fetchOrderBook(this.ticker, 100)
+
+        // trades = trades.map(trade => ({
+        //     side: trade.side == 'sell'?true:false,
+        //     price: trade.price,
+        //     amount: trade.amount,
+        //     ts: trade.timestamp,
+        //     id: trade.id?parseInt(trade.id):0
+        // }))
+
+        // trades.forEach(trade => {
+        //     console.log('trade', trade)
+        // })
+
+        console.log(this.exchange.id, this.ticker.replace(/\//, ''), orders)
+        await sa.post(`${storeurl}/orders/${this.exchange.id}/${this.ticker.replace(/\//, '')}`).send({
+            ts: orders.timestamp? orders.timestamp: (new Date()).getTime(),
+            bids: orders.bids,
+            asks: orders.asks
+        })
+
+    }
+}
+
+class OrdersStore{
+    constructor(exchangeCurrencies){
+        this.store = {}
+        this.exchangeCurrencies = exchangeCurrencies
+        // exchangeCurrencies = {'poloniex': ['BTC/USDT', 'ETH/USDT'] }
+
+        Object.keys(exchangeCurrencies).forEach(exchange => {
+            this.store[exchange] = Object.assign({}, ...exchangeCurrencies[exchange].map(currency => ({[currency]: new OrdersContainer(exchangeId2exchange[exchange], currency)})))
+        })
+    }
+
+    async fetch() {
+        Object.keys(this.store).forEach( async (exchange) => {
+            // console.log('exchange:', this.store[exchange])
+            Object.keys(this.store[exchange]).forEach(async (ticker) => {
+                await this.store[exchange][ticker].fetch()
+            })
+        })
+    }
+}
 
 const main = async () => {
-    let kraken    = new ccxt.kraken()
-    let bitfinex  = new ccxt.bitfinex() //{ verbose: true }
-    let poloniex  = new ccxt.poloniex()
-    let binance   = new ccxt.binance()
-    let bittrex   = new ccxt.bittrex()
 
-    const exchangeId2exchange = Object.assign({}, ...[kraken, bitfinex, poloniex, binance, bittrex].map(exchange => ({[exchange.id]: exchange})))
 
     const exchangeCurrencyPairsPairs = {
         'bitfinex': ['BTC/USDT'],
@@ -51,7 +139,12 @@ const main = async () => {
         'bittrex':  ['BTC/USDT'],
     }
 
-    const container = new TradesStore(exchangeCurrencyPairsPairs)
+    const tradesContainer = new TradesStore(exchangeCurrencyPairsPairs)
+    await tradesContainer.fetch()
+
+    const OrdersContainer = new OrdersStore(exchangeCurrencyPairsPairs)
+    await OrdersContainer.fetch()
+
     // let okcoinusd = new ccxt.okcoinusd ({
     //     apiKey: 'YOUR_PUBLIC_API_KEY',
     //     secret: 'YOUR_SECRET_PRIVATE_KEY',
@@ -72,21 +165,21 @@ const main = async () => {
     // console.log (binance.id,  await binance.loadMarkets ())
     // console.log (bittrex.id,  await bittrex.loadMarkets ())
 
-    console.log (bitfinex.id,  await bitfinex.fetchTicker ('BTC/USDT'))
-    console.log (kraken.id,  await kraken.fetchTicker ('BTC/USD'))
-    console.log (poloniex.id,  await poloniex.fetchTicker ('BTC/USDT'))
-    console.log (binance.id,  await binance.fetchTicker ('BTC/USDT'))
-    console.log (bittrex.id,  await bittrex.fetchTicker ('BTC/USDT'))
+    // console.log (bitfinex.id,  await bitfinex.fetchTicker ('BTC/USDT'))
+    // console.log (kraken.id,  await kraken.fetchTicker ('BTC/USD'))
+    // console.log (poloniex.id,  await poloniex.fetchTicker ('BTC/USDT'))
+    // console.log (binance.id,  await binance.fetchTicker ('BTC/USDT'))
+    // console.log (bittrex.id,  await bittrex.fetchTicker ('BTC/USDT'))
 
     // console.log ("ticker",  await binance.fetchTicker ('BTC/USDT'))
     // console.log ('orderBook',  await binance.fetchOrderBook ('BTC/USDT'))
     // console.log (`trades`,  await binance.fetchTrades ('BTC/USDT'))
 
-    // console.log (bitfinex.id,  await bitfinex.fetchOrderBook ('BTC/USDT'))
-    // console.log (kraken.id,  await kraken.fetchOrderBook ('BTC/USD'))
-    // console.log (poloniex.id,  await poloniex.fetchOrderBook ('BTC/USDT'))
-    // console.log (binance.id,  await binance.fetchOrderBook ('BTC/USDT'))
-    // console.log (bittrex.id,  await bittrex.fetchOrderBook ('BTC/USDT'))
+    console.log (bitfinex.id,  (await bitfinex.fetchOrderBook ('BTC/USDT', 100)).asks.length)
+    console.log (kraken.id,  (await kraken.fetchOrderBook ('BTC/USD', 100)).asks.length)
+    console.log (poloniex.id,  (await poloniex.fetchOrderBook ('BTC/USDT', 100)).asks.length)
+    console.log (binance.id,  (await binance.fetchOrderBook ('BTC/USDT', 100)).asks.length)
+    console.log (bittrex.id,  (await bittrex.fetchOrderBook ('BTC/USDT', 100)).asks.length)
 
     const exchTicker = [
         [bitfinex, 'BTC/USDT'],
