@@ -2,6 +2,22 @@ const ccxt = require('ccxt')
 const sa = require('superagent')
 const storeurl = 'http://localhost:8000'
 
+var wait = async (seconds, silent = true) => {
+    var i = 0;
+    var timerId = setInterval(() => {
+        i += 1;
+    }, 1000)
+
+    var prom = new Promise((resolve, reject) => {
+        setTimeout(() => {
+            clearInterval(timerId);
+            resolve('done')
+        }, seconds * 1000);
+    })
+
+    return prom
+}
+
 const kraken    = new ccxt.kraken()
 const bitfinex  = new ccxt.bitfinex() //{ verbose: true }
 const poloniex  = new ccxt.poloniex()
@@ -11,7 +27,13 @@ const bittrex   = new ccxt.bittrex()
 
 const exchangeId2exchange = Object.assign({}, ...[kraken, bitfinex, poloniex, binance, bittrex].map(exchange => ({[exchange.id]: exchange})))
 
-
+const dictionary = {
+    'BTCUSD': 'BTCUSDT'
+}
+const t = (st) => {
+    if (st in dictionary) return dictionary[st]
+    else return st
+}
 
 class TradesContainer{
     constructor(exchange, ticker){
@@ -22,7 +44,6 @@ class TradesContainer{
     }
 
     async fetch() {
-        console.log()
         const since = this.exchange.milliseconds() - 86400000
         var trades = await this.exchange.fetchTrades(this.ticker, since, 100)
 
@@ -39,7 +60,7 @@ class TradesContainer{
         // })
 
         // console.log(this.exchange.id, this.ticker.replace(/\//, ''), trades)
-        await sa.post(`${storeurl}/trades/${this.exchange.id}/${this.ticker.replace(/\//, '')}`).send({trades: trades.map(trade => ({
+        await sa.post(`${storeurl}/trades/${this.exchange.id}/${t(this.ticker.replace(/\//, ''))}`).send({trades: trades.map(trade => ({
             side: trade.side == 'sell'?true:false,
             price: trade.price,
             amount: trade.amount,
@@ -81,24 +102,11 @@ class OrdersContainer{
     }
 
     async fetch() {
-        console.log()
-        const since = this.exchange.milliseconds() - 86400000
+        // const since = this.exchange.milliseconds() - 86400000
         var orders = await this.exchange.fetchOrderBook(this.ticker, 100)
 
-        // trades = trades.map(trade => ({
-        //     side: trade.side == 'sell'?true:false,
-        //     price: trade.price,
-        //     amount: trade.amount,
-        //     ts: trade.timestamp,
-        //     id: trade.id?parseInt(trade.id):0
-        // }))
-
-        // trades.forEach(trade => {
-        //     console.log('trade', trade)
-        // })
-
         console.log(this.exchange.id, this.ticker.replace(/\//, ''), orders)
-        await sa.post(`${storeurl}/orders/${this.exchange.id}/${this.ticker.replace(/\//, '')}`).send({
+        await sa.post(`${storeurl}/orders/${this.exchange.id}/${t(this.ticker.replace(/\//, ''))}`).send({
             ts: orders.timestamp? orders.timestamp: (new Date()).getTime(),
             bids: orders.bids,
             asks: orders.asks
@@ -128,6 +136,58 @@ class OrdersStore{
     }
 }
 
+
+
+
+class TickerContainer{
+    constructor(exchange, ticker){
+        this.exchange = exchange
+        this.ticker = ticker
+
+        this.container = []
+    }
+
+    async fetch() {
+        // const since = this.exchange.milliseconds() - 86400000
+        var ticker = await this.exchange.fetchTicker(this.ticker)
+
+        console.log(this.exchange.id, this.ticker.replace(/\//, ''), ticker)
+        await sa.post(`${storeurl}/ticker/${this.exchange.id}`).send({
+            ts: Math.ceil(ticker.timestamp),
+            symbol: t(ticker.symbol.replace(/\//, '')),
+            high: ticker.high,
+            low: ticker.low,
+            bid: ticker.bid,
+            ask: ticker.ask,
+            open: ticker.open?ticker.open:ticker.close,
+            close: ticker.close,
+            last: ticker.last,
+        })
+
+    }
+}
+
+class TickerStore{
+    constructor(exchangeCurrencies){
+        this.store = {}
+        this.exchangeCurrencies = exchangeCurrencies
+        // exchangeCurrencies = {'poloniex': ['BTC/USDT', 'ETH/USDT'] }
+
+        Object.keys(exchangeCurrencies).forEach(exchange => {
+            this.store[exchange] = Object.assign({}, ...exchangeCurrencies[exchange].map(currency => ({[currency]: new TickerContainer(exchangeId2exchange[exchange], currency)})))
+        })
+    }
+
+    async fetch() {
+        Object.keys(this.store).forEach( async (exchange) => {
+            // console.log('exchange:', this.store[exchange])
+            Object.keys(this.store[exchange]).forEach(async (ticker) => {
+                await this.store[exchange][ticker].fetch()
+            })
+        })
+    }
+}
+
 const main = async () => {
 
 
@@ -142,8 +202,22 @@ const main = async () => {
     const tradesContainer = new TradesStore(exchangeCurrencyPairsPairs)
     await tradesContainer.fetch()
 
-    const OrdersContainer = new OrdersStore(exchangeCurrencyPairsPairs)
-    await OrdersContainer.fetch()
+
+    // const tradesContainer = new TradesStore(exchangeCurrencyPairsPairs)
+    await wait(5)
+    await tradesContainer.fetch()
+
+    await wait(5)
+    await tradesContainer.fetch()
+
+    await wait(5)
+    await tradesContainer.fetch()
+
+    // const ordersContainer = new OrdersStore(exchangeCurrencyPairsPairs)
+    // await ordersContainer.fetch()
+
+    // const tickerContainer = new TickerStore(exchangeCurrencyPairsPairs)
+    // await tickerContainer.fetch()
 
     // let okcoinusd = new ccxt.okcoinusd ({
     //     apiKey: 'YOUR_PUBLIC_API_KEY',
