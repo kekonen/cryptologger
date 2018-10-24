@@ -86,7 +86,7 @@ class TradesStore{
         Object.keys(this.store).forEach( async (exchange) => {
             // console.log('exchange:', this.store[exchange])
             Object.keys(this.store[exchange]).forEach(async (ticker) => {
-                await this.store[exchange][ticker].fetch()
+                this.store[exchange][ticker].fetch()
             })
         })
     }
@@ -130,7 +130,7 @@ class OrdersStore{
         Object.keys(this.store).forEach( async (exchange) => {
             // console.log('exchange:', this.store[exchange])
             Object.keys(this.store[exchange]).forEach(async (ticker) => {
-                await this.store[exchange][ticker].fetch()
+                this.store[exchange][ticker].fetch()
             })
         })
     }
@@ -182,7 +182,7 @@ class TickerStore{
         Object.keys(this.store).forEach( async (exchange) => {
             // console.log('exchange:', this.store[exchange])
             Object.keys(this.store[exchange]).forEach(async (ticker) => {
-                await this.store[exchange][ticker].fetch()
+                this.store[exchange][ticker].fetch()
             })
         })
     }
@@ -192,13 +192,24 @@ const main = async () => {
 
 
     const exchangeCurrencyPairsPairs = {
-        'bitfinex': ['BTC/USDT'],
-        'kraken':   ['BTC/USD'],
-        'poloniex': ['BTC/USDT'],
-        'binance':  ['BTC/USDT'],
-        'bittrex':  ['BTC/USDT'],
+        'bitfinex': ['BTC/USDT', 'ETH/USDT', 'QTUM/BTC', 'XRP/BTC', 'LTC/BTC', 'DASH/BTC', 'XMR/BTC', 'ZEC/BTC', 'XLM/BTC'],
+        'kraken':   ['BTC/USD',  'ETH/USD',  'QTUM/BTC', 'XRP/BTC', 'LTC/BTC', 'DASH/BTC', 'XMR/BTC', 'ZEC/BTC', 'XLM/BTC'],
+        'poloniex': ['BTC/USDT', 'ETH/USDT', 'QTUM/BTC', 'XRP/BTC', 'LTC/BTC', 'DASH/BTC', 'XMR/BTC', 'ZEC/BTC', 'XLM/BTC'],
+        'binance':  ['BTC/USDT', 'ETH/USDT', 'QTUM/BTC', 'XRP/BTC', 'LTC/BTC', 'DASH/BTC', 'XMR/BTC', 'ZEC/BTC', 'XLM/BTC'],
+        'bittrex':  ['BTC/USDT', 'ETH/USDT', 'QTUM/BTC', 'XRP/BTC', 'LTC/BTC', 'DASH/BTC', 'XMR/BTC', 'ZEC/BTC', 'XLM/BTC'],
     }
 
+
+    const tradesContainer = new TradesStore(exchangeCurrencyPairsPairs)
+    const ordersContainer = new OrdersStore(exchangeCurrencyPairsPairs)
+    const tickerContainer = new TickerStore(exchangeCurrencyPairsPairs)
+
+    setInterval(async () => {
+        await tradesContainer.fetch()
+        await ordersContainer.fetch()
+        await tickerContainer.fetch()
+    }, 5000)
+    // await tradesContainer.fetch()
 
     // const tradesContainer = new TradesStore(exchangeCurrencyPairsPairs)
     // await tradesContainer.fetch()
@@ -223,16 +234,23 @@ const main = async () => {
     // await ordersContainer.fetch()
 
 
-    const tickerContainer = new TickerStore(exchangeCurrencyPairsPairs)
-    await tickerContainer.fetch()
-    await wait(5)
-    await tickerContainer.fetch()
+    // const tickerContainer = new TickerStore(exchangeCurrencyPairsPairs)
+    // await tickerContainer.fetch()
+    // await wait(5)
+    // await tickerContainer.fetch()
 
-    await wait(5)
-    await tickerContainer.fetch()
+    // await wait(5)
+    // await tickerContainer.fetch()
 
-    await wait(5)
-    await tickerContainer.fetch()
+    // await wait(5)
+    // await tickerContainer.fetch()
+
+
+    // console.log (bitfinex.id,  (await bitfinex.fetchTicker ('OMG/BTC')).bid)
+    // console.log (kraken.id,  (await kraken.fetchTicker     ('OMG/BTC')).bid)
+    // console.log (poloniex.id,  (await poloniex.fetchTicker ('OMG/BTC')).bid)
+    // console.log (binance.id,  (await binance.fetchTicker   ('OMG/BTC')).bid)
+    // console.log (bittrex.id,  (await bittrex.fetchTicker   ('OMG/BTC')).bid)
 
 
 
@@ -272,11 +290,11 @@ const main = async () => {
     // console.log ('orderBook',  await binance.fetchOrderBook ('BTC/USDT'))
     // console.log (`trades`,  await binance.fetchTrades ('BTC/USDT'))
 
-    console.log (bitfinex.id,  (await bitfinex.fetchOrderBook ('BTC/USDT', 100)).asks.length)
-    console.log (kraken.id,  (await kraken.fetchOrderBook ('BTC/USD', 100)).asks.length)
-    console.log (poloniex.id,  (await poloniex.fetchOrderBook ('BTC/USDT', 100)).asks.length)
-    console.log (binance.id,  (await binance.fetchOrderBook ('BTC/USDT', 100)).asks.length)
-    console.log (bittrex.id,  (await bittrex.fetchOrderBook ('BTC/USDT', 100)).asks.length)
+    // console.log (bitfinex.id,  (await bitfinex.fetchOrderBook ('BTC/USDT', 100)).asks.length)
+    // console.log (kraken.id,  (await kraken.fetchOrderBook ('BTC/USD', 100)).asks.length)
+    // console.log (poloniex.id,  (await poloniex.fetchOrderBook ('BTC/USDT', 100)).asks.length)
+    // console.log (binance.id,  (await binance.fetchOrderBook ('BTC/USDT', 100)).asks.length)
+    // console.log (bittrex.id,  (await bittrex.fetchOrderBook ('BTC/USDT', 100)).asks.length)
 
     const exchTicker = [
         [bitfinex, 'BTC/USDT'],
