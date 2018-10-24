@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/kekonen/cryptologger#readme",
   "dependencies": {
-    "ccxt": "^1.17.394"
+    "ccxt": "^1.17.394",
+    "superagent": "^4.0.0-beta.5"
   }
 }

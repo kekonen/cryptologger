@@ -152,7 +152,7 @@ class TickerContainer{
         var ticker = await this.exchange.fetchTicker(this.ticker)
 
         console.log(this.exchange.id, this.ticker.replace(/\//, ''), ticker)
-        await sa.post(`${storeurl}/ticker/${this.exchange.id}`).send({
+        await sa.post(`${storeurl}/ticker/${this.exchange.id}/${t(this.ticker.replace(/\//, ''))}`).send({
             ts: Math.ceil(ticker.timestamp),
             symbol: t(ticker.symbol.replace(/\//, '')),
             high: ticker.high,
@@ -199,19 +199,42 @@ const main = async () => {
         'bittrex':  ['BTC/USDT'],
     }
 
-    const tradesContainer = new TradesStore(exchangeCurrencyPairsPairs)
-    await tradesContainer.fetch()
-
 
     // const tradesContainer = new TradesStore(exchangeCurrencyPairsPairs)
+    // await tradesContainer.fetch()
+    // await wait(5)
+    // await tradesContainer.fetch()
+
+    // await wait(5)
+    // await tradesContainer.fetch()
+
+    // await wait(5)
+    // await tradesContainer.fetch()
+
+    // const ordersContainer = new OrdersStore(exchangeCurrencyPairsPairs)
+    // await ordersContainer.fetch()
+    // await wait(5)
+    // await ordersContainer.fetch()
+
+    // await wait(5)
+    // await ordersContainer.fetch()
+
+    // await wait(5)
+    // await ordersContainer.fetch()
+
+
+    const tickerContainer = new TickerStore(exchangeCurrencyPairsPairs)
+    await tickerContainer.fetch()
     await wait(5)
-    await tradesContainer.fetch()
+    await tickerContainer.fetch()
 
     await wait(5)
-    await tradesContainer.fetch()
+    await tickerContainer.fetch()
 
     await wait(5)
-    await tradesContainer.fetch()
+    await tickerContainer.fetch()
+
+
 
     // const ordersContainer = new OrdersStore(exchangeCurrencyPairsPairs)
     // await ordersContainer.fetch()
