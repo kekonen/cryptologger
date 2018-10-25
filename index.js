@@ -2,7 +2,7 @@ const ccxt = require('ccxt')
 const sa = require('superagent')
 const storeurl = 'http://localhost:8000'
 
-var wait = async (seconds, silent = true) => {
+const wait = async (seconds, silent = true) => {
     var i = 0;
     var timerId = setInterval(() => {
         i += 1;
@@ -16,6 +16,18 @@ var wait = async (seconds, silent = true) => {
     })
 
     return prom
+}
+
+async function asyncForEach(array, callback) {
+    try {
+        for (let index = 0; index < array.length; index++) {
+            await callback(array[index], index, array)
+        }
+    } catch(e) {
+        // console.log(`Async For Each function detected an error`)
+        throw e
+    }
+    
 }
 
 const kraken    = new ccxt.kraken()
@@ -85,9 +97,12 @@ class TradesStore{
     async fetch() {
         Object.keys(this.store).forEach( async (exchange) => {
             // console.log('exchange:', this.store[exchange])
-            Object.keys(this.store[exchange]).forEach(async (ticker) => {
-                this.store[exchange][ticker].fetch()
+            asyncForEach(Object.keys(this.store[exchange]), async (ticker) => {
+                await this.store[exchange][ticker].fetch()
             })
+            // Object.keys(this.store[exchange]).forEach(async (ticker) => {
+            //     this.store[exchange][ticker].fetch()
+            // })
         })
     }
 }
@@ -105,7 +120,7 @@ class OrdersContainer{
         // const since = this.exchange.milliseconds() - 86400000
         var orders = await this.exchange.fetchOrderBook(this.ticker, 100)
 
-        console.log(this.exchange.id, this.ticker.replace(/\//, ''), orders)
+        // console.log(this.exchange.id, this.ticker.replace(/\//, ''), orders)
         await sa.post(`${storeurl}/orders/${this.exchange.id}/${t(this.ticker.replace(/\//, ''))}`).send({
             ts: orders.timestamp? orders.timestamp: (new Date()).getTime(),
             bids: orders.bids,
@@ -120,7 +135,7 @@ class OrdersStore{
         this.store = {}
         this.exchangeCurrencies = exchangeCurrencies
         // exchangeCurrencies = {'poloniex': ['BTC/USDT', 'ETH/USDT'] }
-
+        
         Object.keys(exchangeCurrencies).forEach(exchange => {
             this.store[exchange] = Object.assign({}, ...exchangeCurrencies[exchange].map(currency => ({[currency]: new OrdersContainer(exchangeId2exchange[exchange], currency)})))
         })
@@ -129,9 +144,13 @@ class OrdersStore{
     async fetch() {
         Object.keys(this.store).forEach( async (exchange) => {
             // console.log('exchange:', this.store[exchange])
-            Object.keys(this.store[exchange]).forEach(async (ticker) => {
-                this.store[exchange][ticker].fetch()
+
+            asyncForEach(Object.keys(this.store[exchange]), async (ticker) => {
+                await this.store[exchange][ticker].fetch()
             })
+            // Object.keys(this.store[exchange]).forEach(async (ticker) => {
+            //     this.store[exchange][ticker].fetch()
+            // })
         })
     }
 }
@@ -151,7 +170,7 @@ class TickerContainer{
         // const since = this.exchange.milliseconds() - 86400000
         var ticker = await this.exchange.fetchTicker(this.ticker)
 
-        console.log(this.exchange.id, this.ticker.replace(/\//, ''), ticker)
+        // console.log(this.exchange.id, this.ticker.replace(/\//, ''), ticker)
         await sa.post(`${storeurl}/ticker/${this.exchange.id}/${t(this.ticker.replace(/\//, ''))}`).send({
             ts: Math.ceil(ticker.timestamp),
             symbol: t(ticker.symbol.replace(/\//, '')),
@@ -181,9 +200,13 @@ class TickerStore{
     async fetch() {
         Object.keys(this.store).forEach( async (exchange) => {
             // console.log('exchange:', this.store[exchange])
-            Object.keys(this.store[exchange]).forEach(async (ticker) => {
-                this.store[exchange][ticker].fetch()
+
+            asyncForEach(Object.keys(this.store[exchange]), async (ticker) => {
+                await this.store[exchange][ticker].fetch()
             })
+            // Object.keys(this.store[exchange]).forEach(async (ticker) => {
+            //     this.store[exchange][ticker].fetch()
+            // })
         })
     }
 }
@@ -204,11 +227,24 @@ const main = async () => {
     const ordersContainer = new OrdersStore(exchangeCurrencyPairsPairs)
     const tickerContainer = new TickerStore(exchangeCurrencyPairsPairs)
 
+
+    // await tradesContainer.fetch()
+    //     await wait(5)
+    //     await ordersContainer.fetch()
+    //     await wait(5)
+    //     await tickerContainer.fetch()
+
+    // await tradesContainer.fetch()
+    // await ordersContainer.fetch()
+    // await tickerContainer.fetch()
+
     setInterval(async () => {
         await tradesContainer.fetch()
+        await wait(5)
         await ordersContainer.fetch()
+        await wait(5)
         await tickerContainer.fetch()
-    }, 5000)
+    }, 20000)
     // await tradesContainer.fetch()
 
     // const tradesContainer = new TradesStore(exchangeCurrencyPairsPairs)
